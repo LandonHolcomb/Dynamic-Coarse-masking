@@ -186,6 +186,8 @@ class TestSwapTestFidelity:
         dm2 = create_pure_state_density_matrix(state2)
         
         # For pure states, classical and quantum fidelity should match
+        # Note: Tolerance is 1e-3 due to numerical precision in eigendecomposition
+        # and matrix square root operations used in quantum fidelity calculation
         classical = swap_test_fidelity(dm1, dm2, classical_approximation=True)
         quantum = swap_test_fidelity(dm1, dm2, classical_approximation=False)
         

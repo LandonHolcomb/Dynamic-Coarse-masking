@@ -279,8 +279,9 @@ class DCMMSRAttention(nn.Module):
         coarse_weights = coarse_weights.reshape(batch, heads, 1, k * window_size)
         
         # Add log of coarse weights to scores (multiplicative in attention space)
-        # Handle zeros by clamping
-        log_coarse = torch.log(coarse_weights.clamp(min=1e-10))
+        # Use eps=1e-6 to avoid numerical instability in log while preserving gradient flow
+        eps = 1e-6
+        log_coarse = torch.log(coarse_weights + eps)
         attn_scores = attn_scores + log_coarse
         
         # Softmax over all selected tokens

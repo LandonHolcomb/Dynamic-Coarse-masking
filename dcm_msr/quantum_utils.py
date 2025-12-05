@@ -111,12 +111,13 @@ def swap_test_fidelity(
         # Full quantum fidelity: F(ρ, σ) = [Tr(√(√ρ σ √ρ))]²
         # This requires matrix square root, which is computationally expensive
         # We use eigendecomposition: √A = V √Λ V†
+        # Note: Requires PyTorch 1.9+ for torch.linalg.eigh and torch.linalg.eigvalsh
         
         # Compute √ρ via eigendecomposition
         eigenvalues, eigenvectors = torch.linalg.eigh(rho)
         eigenvalues = torch.clamp(eigenvalues, min=0)  # Ensure non-negative
         sqrt_eigenvalues = torch.sqrt(eigenvalues)
-        sqrt_rho = eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.mH
+        sqrt_rho = eigenvectors @ torch.diag_embed(sqrt_eigenvalues) @ eigenvectors.conj().transpose(-1, -2)
         
         # Compute √ρ σ √ρ
         inner = sqrt_rho @ sigma @ sqrt_rho
