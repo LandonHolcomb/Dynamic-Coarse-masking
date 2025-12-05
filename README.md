@@ -1,1 +1,190 @@
-# Dynamic-Coarse-masking
+# DCM-MSR: Dynamic Coarse Masking - Multi-Scale Routing
+
+A hybrid quantum-classical attention scheme that provides efficient attention computation through coarse-to-fine routing.
+
+## Overview
+
+DCM-MSR (Dynamic Coarse Masking - Multi-Scale Routing) is an attention mechanism that:
+
+1. **Separates tokens into windows** - The input sequence is partitioned into non-overlapping windows
+2. **Combines keys into ensemble density matrices** - Keys within each window are combined into a mixed quantum state representation
+3. **Performs fidelity (SWAP) test** - A quantum-inspired SWAP test computes the fidelity between the query (pure state) and key ensembles for coarse attention scoring
+4. **Routes top-k windows** - Only the most relevant windows are selected for fine-grained attention
+5. **Fine-grained token-to-token attention** - Standard attention is computed within the selected windows
+
+This approach reduces the computational complexity from O(n²) to O(n × k × w) where:
+- n = sequence length
+- k = number of selected top-k windows
+- w = window size
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+For development:
+```bash
+pip install -e ".[dev]"
+```
+
+## Quick Start
+
+```python
+import torch
+from dcm_msr import DCMMSRAttention, DCMMSRSelfAttention
+
+# Create attention module
+attn = DCMMSRSelfAttention(
+    embed_dim=512,
+    num_heads=8,
+    window_size=16,
+    top_k=4,
+)
+
+# Forward pass
+x = torch.randn(2, 128, 512)  # (batch, seq_len, embed_dim)
+output, attention_info = attn(x, return_attention=True)
+
+print(f"Output shape: {output.shape}")  # (2, 128, 512)
+```
+
+## API Reference
+
+### DCMMSRAttention
+
+The main cross-attention module.
+
+```python
+DCMMSRAttention(
+    embed_dim: int,           # Embedding dimension
+    num_heads: int,           # Number of attention heads
+    window_size: int = 16,    # Size of each window for coarse attention
+    top_k: int = 4,           # Number of top windows to select
+    dropout: float = 0.0,     # Dropout probability
+    bias: bool = True,        # Use bias in projections
+    use_quantum_fidelity: bool = False,  # Full quantum fidelity (slower)
+)
+```
+
+### DCMMSRSelfAttention
+
+Self-attention variant where query, key, and value come from the same input.
+
+```python
+attn = DCMMSRSelfAttention(embed_dim=512, num_heads=8, window_size=16, top_k=4)
+output, _ = attn(x)  # Single input tensor
+```
+
+### Quantum Utilities
+
+```python
+from dcm_msr import (
+    create_pure_state_density_matrix,   # |ψ⟩⟨ψ| for pure states
+    create_ensemble_density_matrix,      # Σ pᵢ |ψᵢ⟩⟨ψᵢ| for mixed states
+    swap_test_fidelity,                  # F(ρ, σ) = Tr(ρσ) fidelity
+)
+```
+
+### Windowing Utilities
+
+```python
+from dcm_msr import create_windows, merge_windows
+
+# Create windows from sequence
+windowed, mask, orig_len = create_windows(tokens, window_size=16)
+
+# Merge back after processing
+output = merge_windows(windowed, orig_len)
+```
+
+## How It Works
+
+### 1. Windowing
+
+The input sequence is divided into non-overlapping windows:
+
+```
+[t₁, t₂, ..., tₙ] → [[t₁, ..., t_w], [t_{w+1}, ..., t_{2w}], ...]
+```
+
+### 2. Ensemble Density Matrix
+
+For each window, keys are combined into an ensemble (mixed) density matrix:
+
+```
+ρ_window = (1/w) Σᵢ |kᵢ⟩⟨kᵢ|
+```
+
+This represents the "average" quantum state of keys in the window.
+
+### 3. SWAP Test Scoring
+
+The coarse attention score is computed using a quantum-inspired SWAP test:
+
+```
+score(q, window) = Tr(|q⟩⟨q| · ρ_window) = ⟨q|ρ_window|q⟩
+```
+
+This measures how similar the query is to the average key in each window.
+
+### 4. Top-k Routing
+
+The k windows with highest coarse scores are selected:
+
+```
+selected_windows = topk(scores, k)
+```
+
+### 5. Fine-Grained Attention
+
+Standard scaled dot-product attention is computed within selected windows:
+
+```
+Attention(Q, K, V) = softmax(QK^T / √d) · V
+```
+
+## Example: Transformer Block
+
+```python
+import torch.nn as nn
+from dcm_msr import DCMMSRSelfAttention
+
+class DCMMSRTransformerBlock(nn.Module):
+    def __init__(self, embed_dim, num_heads, window_size, top_k, ff_dim):
+        super().__init__()
+        self.attn = DCMMSRSelfAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            window_size=window_size,
+            top_k=top_k,
+        )
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.ffn = nn.Sequential(
+            nn.Linear(embed_dim, ff_dim),
+            nn.GELU(),
+            nn.Linear(ff_dim, embed_dim),
+        )
+        self.norm2 = nn.LayerNorm(embed_dim)
+    
+    def forward(self, x):
+        # DCM-MSR attention with residual
+        attn_out, _ = self.attn(self.norm1(x))
+        x = x + attn_out
+        
+        # FFN with residual
+        x = x + self.ffn(self.norm2(x))
+        return x
+```
+
+## Testing
+
+Run tests with pytest:
+
+```bash
+pytest tests/ -v
+```
+
+## License
+
+MIT License
