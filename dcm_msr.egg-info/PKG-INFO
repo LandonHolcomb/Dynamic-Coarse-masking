@@ -1,3 +1,26 @@
+Metadata-Version: 2.4
+Name: dcm-msr
+Version: 0.1.0
+Summary: DCM-MSR: Dynamic Coarse Masking - Multi-Scale Routing Attention
+Author: DCM-MSR Authors
+License: MIT
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: torch>=1.9.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+
 # DCM-MSR: Dynamic Coarse Masking - Multi-Scale Routing
 
 A hybrid quantum-classical attention scheme that provides efficient attention computation through coarse-to-fine routing.
