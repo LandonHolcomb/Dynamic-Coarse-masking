@@ -4,7 +4,7 @@ A hybrid quantum-classical attention scheme that provides efficient attention co
 
 ## Overview
 
-DCM-MSR (Dynamic Coarse Masking - Multi-Scale Routing) is an attention mechanism that:
+DCM-MSR (Dynamic Coarse Masking - With Mixed-State Routing) is an attention mechanism that:
 
 1. **Separates tokens into windows** - The input sequence is partitioned into non-overlapping windows
 2. **Combines keys into ensemble density matrices** - Keys within each window are combined into a mixed quantum state representation
